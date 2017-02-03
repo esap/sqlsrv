@@ -96,14 +96,13 @@ func CheckBool(sql string, cond ...interface{}) bool {
 
 // FetchOne 返回单行
 func FetchOne(query string, cond ...interface{}) *[]interface{} {
-	err := checkDB()
-	if err != nil {
+	if checkDB() != nil {
 		return nil
 	}
 	row := db.QueryRow(query, cond...)
 	result := make([]interface{}, 0)
 	onerow := make([]interface{}, 1)
-	err = row.Scan(onerow...)
+	err := row.Scan(onerow...)
 	if err != nil {
 		panic(err)
 	}
@@ -113,8 +112,7 @@ func FetchOne(query string, cond ...interface{}) *[]interface{} {
 
 // FetchAll 返回所有行
 func FetchAll(query string, cond ...interface{}) *[]interface{} {
-	err := checkDB()
-	if err != nil {
+	if checkDB() != nil {
 		return nil
 	}
 	rows, err := db.Query(query, cond...)
@@ -160,8 +158,7 @@ func (t *treeNode) appendChild(c interface{}) {
 
 // FetchMenuTree ES目录树
 func FetchMenuTree(query string, cond ...interface{}) *treeNode {
-	err := checkDB()
-	if err != nil {
+	if checkDB() != nil {
 		return nil
 	}
 	rows, err := db.Query(query, cond...)
@@ -200,12 +197,11 @@ func FetchMenuTree(query string, cond ...interface{}) *treeNode {
 
 // Fetch 返回单值
 func Fetch(query string, cond ...interface{}) *interface{} {
-	err := checkDB()
-	if err != nil {
+	if checkDB() != nil {
 		return nil
 	}
 	var rst interface{}
-	err = db.QueryRow(query, cond...).Scan(&rst)
+	err := db.QueryRow(query, cond...).Scan(&rst)
 	if err != nil {
 		log.Println("sqlsrv.fetch()->", err)
 		return nil
@@ -216,8 +212,7 @@ func Fetch(query string, cond ...interface{}) *interface{} {
 
 // NumRows 返回行数
 func NumRows(query string, cond ...interface{}) int {
-	err := checkDB()
-	if err != nil {
+	if checkDB() != nil {
 		return 0
 	}
 	rows, err := db.Query(query, cond...)
@@ -232,10 +227,6 @@ func NumRows(query string, cond ...interface{}) int {
 
 // Exec 执行SQL，update/insert/delete
 func Exec(query string, cond ...interface{}) error {
-	err := checkDB()
-	if err != nil {
-		return err
-	}
 	stmt, err := db.Prepare(query)
 	checkErr(err)
 	defer stmt.Close()
@@ -249,8 +240,7 @@ func Exec(query string, cond ...interface{}) error {
 // FetchAllRowsPtr 通用查询
 func FetchAllRowsPtr(query string, struc interface{}, cond ...interface{}) *[]interface{} {
 	result := make([]interface{}, 0)
-	err := checkDB()
-	if err != nil {
+	if checkDB() != nil {
 		return &result
 	}
 	rows, err := db.Query(query, cond...)
@@ -276,8 +266,7 @@ func FetchAllRowsPtr(query string, struc interface{}, cond ...interface{}) *[]in
 
 // FetchOnePtr 通用查询单条
 func FetchOnePtr(query string, struc interface{}, cond ...interface{}) *interface{} {
-	err := checkDB()
-	if err != nil {
+	if checkDB() != nil {
 		return nil
 	}
 	rows, err := db.Query(query, cond...)

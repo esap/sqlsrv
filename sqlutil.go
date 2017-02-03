@@ -1,6 +1,7 @@
 package sqlsrv
 
 import (
+	"regexp"
 	"time"
 )
 
@@ -23,4 +24,17 @@ func checkErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// SqlChk 防sql注入
+func SqlChk(s string) string {
+	str := `(?:')|(?:--)|(/\\*(?:.|[\\n\\r])*?\\*/)|(\b(select|update|and|or|delete|insert|trancate|char|chr|into|substr|ascii|declare|exec|count|master|into|drop|execute)\b)`
+	re, err := regexp.Compile(str)
+	if err != nil {
+		return err.Error()
+	}
+	if re.MatchString(s) {
+		return "valid sqlStr"
+	}
+	return s
 }
