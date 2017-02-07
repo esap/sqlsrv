@@ -95,19 +95,34 @@ func CheckBool(sql string, cond ...interface{}) bool {
 }
 
 // FetchOne 返回单行
-func FetchOne(query string, cond ...interface{}) *[]interface{} {
+func FetchOne(query string, cond ...interface{}) *map[string]interface{} {
 	if checkDB() != nil {
 		return nil
 	}
-	row := db.QueryRow(query, cond...)
-	result := make([]interface{}, 0)
-	onerow := make([]interface{}, 1)
-	err := row.Scan(onerow...)
+	rows, err := db.Query(query, cond...)
+	defer rows.Close()
 	if err != nil {
-		panic(err)
+		log.Println("FetchAll()->Query error:", err)
+		return nil
 	}
-	result = append(result, onerow)
-	return &result
+	cols, err := rows.Columns()
+	checkErr(err)
+	leng := len(cols)
+	scanArgs := make([]interface{}, leng)      // 扫描专用指针
+	onerow := make([]interface{}, leng)        // 数据行，无字段名
+	data := make(map[string]interface{}, leng) // 数据行，含字段名
+	for i := range onerow {
+		scanArgs[i] = &onerow[i]
+	}
+	if rows.Next() {
+		if rows.Scan(scanArgs...) != nil {
+			return nil
+		}
+		for i, _ := range onerow {
+			data[cols[i]] = conv(onerow[i])
+		}
+	}
+	return &data
 }
 
 // FetchAll 返回所有行
@@ -117,7 +132,7 @@ func FetchAll(query string, cond ...interface{}) *[]interface{} {
 	}
 	rows, err := db.Query(query, cond...)
 	if err != nil {
-		log.Println("FetchAll.Query:", err)
+		log.Println("FetchAll()->Query error:", err)
 		return nil
 	}
 	defer rows.Close()
@@ -203,7 +218,7 @@ func Fetch(query string, cond ...interface{}) *interface{} {
 	var rst interface{}
 	err := db.QueryRow(query, cond...).Scan(&rst)
 	if err != nil {
-		log.Println("sqlsrv.fetch()->", err)
+		log.Println("Fetch()->QueryRow error:", err)
 		return nil
 	}
 	rst = conv(rst)
@@ -216,8 +231,8 @@ func NumRows(query string, cond ...interface{}) int {
 		return 0
 	}
 	rows, err := db.Query(query, cond...)
-	checkErr(err)
 	defer rows.Close()
+	checkErr(err)
 	result := 0
 	for rows.Next() {
 		result++
@@ -271,7 +286,7 @@ func FetchOnePtr(query string, struc interface{}, cond ...interface{}) *interfac
 	}
 	rows, err := db.Query(query, cond...)
 	if err != nil {
-		fmt.Println("FetchOnePtr>>>", err)
+		fmt.Println("FetchOnePtr()->FetchOnePtr error:", err)
 		return nil
 	}
 	defer rows.Close()
