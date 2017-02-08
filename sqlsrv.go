@@ -4,6 +4,7 @@ package sqlsrv
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -37,42 +38,36 @@ type DbConf struct {
 
 // checkDB 检查DB是否连接，无则进行连接
 func checkDB() error {
-	if db != nil {
-		return nil
-	}
-	if dc != nil {
+	if db != nil || dc != nil {
 		return nil
 	}
 	c, err := ioutil.ReadFile(conf)
 	if err != nil {
-		log.Println("读SQL配置文件出错:", err)
 		return err
 	}
 
 	if err := json.Unmarshal(c, &dc); err != nil {
-		log.Println("解析SQL配置文件出错:", err)
 		return err
 	}
-	linkDb()
-	return nil
+	return linkDb()
 }
 
-func linkDb() {
+func linkDb() (err error) {
 	//	dsn := fmt.Sprintf("server=%s;User id=%s;password=%s;database=%s",
 	dsn := fmt.Sprintf("driver={SQL Server};SERVER=%s;UID=%s;PWD=%s;DATABASE=%s",
 		dc.Server, dc.UserId, dc.Pwd, dc.DbName)
 	//	db1, err := sql.Open("mssql", dsn)
-	db1, err := sql.Open("odbc", dsn)
-	checkErr(err)
-	db = db1
+	db, err = sql.Open("odbc", dsn)
+	return err
 }
 
 // ChangeDb 更改配置
-func ChangeDb(s ...string) {
+func ChangeDb(s ...string) error {
 	if len(s) == 4 {
 		dc = &DbConf{s[0], s[1], s[2], s[3]}
-		linkDb()
+		return linkDb()
 	}
+	return errors.New("ChangeDb need 4 params")
 }
 
 // SetConf 配置DB参数
@@ -87,11 +82,10 @@ func CheckBool(sql string, cond ...interface{}) bool {
 	}
 	rs, err := db.Query(sql, cond...)
 	defer rs.Close()
-	checkErr(err)
-	if !rs.Next() {
+	if err != nil {
 		return false
 	}
-	return true
+	return rs.Next()
 }
 
 // FetchOne 返回单行
@@ -118,8 +112,8 @@ func FetchOne(query string, cond ...interface{}) *map[string]interface{} {
 		if rows.Scan(scanArgs...) != nil {
 			return nil
 		}
-		for i, _ := range onerow {
-			data[cols[i]] = conv(onerow[i])
+		for k, _ := range onerow {
+			data[cols[k]] = conv(onerow[k])
 		}
 	}
 	return &data
@@ -146,13 +140,12 @@ func FetchAll(query string, cond ...interface{}) *[]interface{} {
 		scanArgs[i] = &onerow[i]
 	}
 	for rows.Next() {
-		err = rows.Scan(scanArgs...)
-		if err != nil {
+		if rows.Scan(scanArgs...) != nil {
 			continue
 		}
 		data := make(map[string]interface{}) // 数据行，含字段名
-		for i, _ := range onerow {
-			data[cols[i]] = conv(onerow[i])
+		for k, _ := range onerow {
+			data[cols[k]] = conv(onerow[k])
 		}
 		result = append(result, data)
 	}
@@ -243,13 +236,12 @@ func FetchMenuTree(query string, cond ...interface{}) *treeNode {
 	treeMap := make(map[string]*treeNode, 0)
 	tree := &treeNode{1, "root", true, false, make([]interface{}, 0)}
 	for rows.Next() {
-		err = rows.Scan(scanArgs...)
-		if err != nil {
+		if rows.Scan(scanArgs...) != nil {
 			continue
 		}
 		data := make(map[string]interface{}) //数据行，含字段名
-		for i, _ := range onerow {
-			data[cols[i]] = conv(onerow[i])
+		for k, _ := range onerow {
+			data[cols[k]] = conv(onerow[k])
 		}
 		menuName := fmt.Sprintf("%s", data["menu"])
 		if _, ok := treeMap[menuName]; !ok {
