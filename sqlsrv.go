@@ -159,6 +159,59 @@ func FetchAll(query string, cond ...interface{}) *[]interface{} {
 	return &result
 }
 
+// FetchAllJson 返回所有行的Json
+func FetchAllJson(sql string, cond ...interface{}) string {
+	if checkDB() != nil {
+		return ""
+	}
+	stmt, err := db.Prepare(sql)
+	if err != nil {
+		log.Println("FetchAllJson()->Prepare error:", err)
+		return ""
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(cond...)
+	if err != nil {
+		log.Println("FetchAllJson()->Query error:", err)
+		return ""
+	}
+	defer rows.Close()
+	columns, err := rows.Columns()
+	if err != nil {
+		log.Println("FetchAllJson()->Columns error:", err)
+		return ""
+	}
+	count := len(columns)
+	tableData := make([]map[string]interface{}, 0)
+	values := make([]interface{}, count)
+	valuePtrs := make([]interface{}, count)
+	for rows.Next() {
+		for i := 0; i < count; i++ {
+			valuePtrs[i] = &values[i]
+		}
+		rows.Scan(valuePtrs...)
+		entry := make(map[string]interface{})
+		for i, col := range columns {
+			var v interface{}
+			val := values[i]
+			b, ok := val.([]byte)
+			if ok {
+				v = string(b)
+			} else {
+				v = val
+			}
+			entry[col] = v
+		}
+		tableData = append(tableData, entry)
+	}
+	jsonData, err := json.Marshal(tableData)
+	if err != nil {
+		log.Println("FetchAllJson()->Marshal error:", err)
+		return ""
+	}
+	return string(jsonData)
+}
+
 type treeNode struct {
 	Id       interface{}   `json:"id"`
 	Text     interface{}   `json:"text"`
