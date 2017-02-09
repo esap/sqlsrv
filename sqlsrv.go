@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"reflect"
+	"strings"
 
 	_ "github.com/alexbrainman/odbc"
 	//	_ "github.com/denisenkom/go-mssqldb"
@@ -101,6 +102,9 @@ func FetchOne(query string, cond ...interface{}) *map[string]interface{} {
 	}
 	cols, err := rows.Columns()
 	checkErr(err)
+	for k, v := range cols {
+		cols[k] = strings.ToLower(v)
+	}
 	leng := len(cols)
 	scanArgs := make([]interface{}, leng)      // 扫描专用指针
 	onerow := make([]interface{}, leng)        // 数据行，无字段名
@@ -300,11 +304,13 @@ func Exec(query string, cond ...interface{}) error {
 // FetchAllRowsPtr 通用查询
 func FetchAllRowsPtr(query string, struc interface{}, cond ...interface{}) *[]interface{} {
 	result := make([]interface{}, 0)
-	if checkDB() != nil {
+	if err := checkDB(); err != nil {
+		log.Println("FetchAllRowsPtr()->chechDB err", err)
 		return &result
 	}
 	rows, err := db.Query(query, cond...)
 	if err != nil {
+		log.Println("FetchAllRowsPtr()->Query", err)
 		return &result
 	}
 	defer rows.Close()
@@ -317,6 +323,7 @@ func FetchAllRowsPtr(query string, struc interface{}, cond ...interface{}) *[]in
 	for rows.Next() {
 		err = rows.Scan(onerow...)
 		if err != nil {
+			log.Println("FetchAllRowsPtr()->Scan", err)
 			return &result
 		}
 		result = append(result, s.Interface())
