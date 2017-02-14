@@ -1,6 +1,7 @@
 package sqlsrv
 
 import (
+	"fmt"
 	"regexp"
 	"time"
 )
@@ -16,6 +17,20 @@ func conv(pval interface{}) interface{} {
 		return v.Format("2006-01-02 15:04:05")
 	default:
 		return v
+	}
+}
+
+// 转换sqlserver值格式
+func conStr(pval interface{}) string {
+	switch v := (pval).(type) {
+	case nil:
+		return ""
+	case []byte:
+		return string(v)
+	case time.Time:
+		return v.Format("2006-01-02 15:04:05")
+	default:
+		return fmt.Sprint(v)
 	}
 }
 

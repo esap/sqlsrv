@@ -123,6 +123,40 @@ func FetchOne(query string, cond ...interface{}) *map[string]interface{} {
 	return &data
 }
 
+// FetchOneString 返回单行文本
+func FetchOneString(query string, cond ...interface{}) map[string]string {
+	if checkDB() != nil {
+		return nil
+	}
+	rows, err := db.Query(query, cond...)
+	defer rows.Close()
+	if err != nil {
+		log.Println("FetchAll()->Query error:", err)
+		return nil
+	}
+	cols, err := rows.Columns()
+	checkErr(err)
+	for k, v := range cols {
+		cols[k] = strings.ToLower(v)
+	}
+	leng := len(cols)
+	scanArgs := make([]interface{}, leng) // 扫描专用指针
+	onerow := make([]interface{}, leng)   // 数据行，无字段名
+	data := make(map[string]string, leng) // 数据行，含字段名
+	for i := range onerow {
+		scanArgs[i] = &onerow[i]
+	}
+	if rows.Next() {
+		if rows.Scan(scanArgs...) != nil {
+			return nil
+		}
+		for k, _ := range onerow {
+			data[cols[k]] = conStr(onerow[k])
+		}
+	}
+	return data
+}
+
 // FetchAll 返回所有行
 func FetchAll(query string, cond ...interface{}) *[]interface{} {
 	if checkDB() != nil {
